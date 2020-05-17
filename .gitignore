@@ -4,6 +4,7 @@
 *.iws
 *.orig
 *.rej
+*.csv
 .idea
 .svn
 .classpath
