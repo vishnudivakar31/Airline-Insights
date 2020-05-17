@@ -24,7 +24,8 @@ public class Insight {
 
         AnalyticsEngine analyticsEngine = new AnalyticsEngine(spark);
 
-        analyticsEngine.findTopAirportsByTaxiTime(csvData);
-        analyticsEngine.findTopAirlinesByDelay(csvData);
+        /*analyticsEngine.findTopAirportsByTaxiTime(csvData);
+        analyticsEngine.findTopAirlinesByDelay(csvData);*/
+        analyticsEngine.findTopCancellationReasons(csvData);
     }
 }

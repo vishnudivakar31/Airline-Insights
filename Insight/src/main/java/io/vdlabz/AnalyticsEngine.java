@@ -1,10 +1,17 @@
 package io.vdlabz;
 
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.spark_project.dmg.pmml.DataType;
+import scala.Tuple2;
 
-import static org.apache.spark.sql.functions.abs;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.apache.spark.sql.functions.*;
 
 public class AnalyticsEngine {
     private final String CARRIER_FILE_PATH = "src/main/resources/support-data/carriers.csv";
@@ -75,5 +82,34 @@ public class AnalyticsEngine {
         worstAirports.show();
         System.out.println("Best Airports");
         bestAirports.show();
+    }
+
+    public void findTopCancellationReasons(Dataset<Row> csvData) {
+        StructField[] structFields = new StructField[] {
+                new StructField("cancellation-code", DataTypes.StringType, true, Metadata.empty()),
+                new StructField("cancellation-reason", DataTypes.StringType, true, Metadata.empty())
+        };
+
+        StructType structType = new StructType(structFields);
+
+        List<Row> cancellationCodeMapper = Arrays.asList(
+                RowFactory.create("A", "Carrier Related"),
+                RowFactory.create("B", "Weather Related"),
+                RowFactory.create("C", "National Space and Security Related"),
+                RowFactory.create("D", "Security Related")
+        );
+        Encoder<Tuple2<String, String>> encoder = Encoders.tuple(Encoders.STRING(), Encoders.STRING());
+        Dataset<Row> cancellationCodeDS = spark.createDataFrame(cancellationCodeMapper, structType);
+
+        Dataset<Row> data = csvData
+                .filter(csvData.col("Cancelled").equalTo(true))
+                .select(csvData.col("CancellationCode").as("cancellation-code"));
+        data = data.withColumn("num", lit(1));
+        data = data.groupBy(data.col("cancellation-code"))
+                .sum()
+                .withColumnRenamed("sum(num)", "total-counts")
+                .orderBy(col("total-counts").desc());
+        data = data.join(cancellationCodeDS, "cancellation-code");
+        data.show();
     }
 }
