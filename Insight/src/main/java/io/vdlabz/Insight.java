@@ -7,12 +7,19 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 public class Insight {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         Logger.getLogger("org.apache").setLevel(Level.WARN);
+
+        if(args.length < 2) {
+            throw new Exception("Expecting 2 arguments, \n1: Input Directory\n2. Output Directory");
+        }
+
+        String inputDirectory = args[0];
+        String outputDirectory = args[1];
 
         SparkSession spark = SparkSession
                 .builder()
-                .master("local[*]")
+                .master("yarn-cluster")
                 .appName(Insight.class.getName())
                 .getOrCreate();
 
@@ -20,14 +27,14 @@ public class Insight {
                 .read()
                 .option("inferSchema", true)
                 .option("header", true)
-                .csv("src/main/resources/csv/*");
+                .csv(String.format("%s/*", inputDirectory));
 
-        AnalyticsEngine analyticsEngine = new AnalyticsEngine(spark);
+        AnalyticsEngine analyticsEngine = new AnalyticsEngine(spark, outputDirectory);
 
-        /*analyticsEngine.findTopAirportsByTaxiTime(csvData);
+        analyticsEngine.findTopAirportsByTaxiTime(csvData);
         analyticsEngine.findTopAirlinesByDelay(csvData);
         analyticsEngine.findTopCancellationReasons(csvData);
-        analyticsEngine.findTopDelays(csvData);*/
+        analyticsEngine.findTopDelays(csvData);
         analyticsEngine.findTopAirlinesByFleet(csvData);
     }
 }
