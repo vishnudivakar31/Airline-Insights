@@ -148,4 +148,17 @@ public class AnalyticsEngine {
 
         data.show();
     }
+
+    public void findTopAirlinesByFleet(Dataset<Row> csvData) {
+        Dataset<Row> data = csvData
+                .select(col("UniqueCarrier").as("carrier-code"), col("FlightNum").as("flight-num"))
+                .distinct()
+                .groupBy(col("carrier-code"))
+                .count();
+        data = data
+                .join(carrierCodes, "carrier-code")
+                .orderBy(col("count").desc())
+                .limit(10);
+        data.show();
+    }
 }
