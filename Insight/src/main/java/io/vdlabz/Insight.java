@@ -10,12 +10,13 @@ public class Insight {
     public static void main(String[] args) throws Exception {
         Logger.getLogger("org.apache").setLevel(Level.WARN);
 
-        if(args.length < 2) {
+        if(args.length < 3) {
             throw new Exception("Expecting 2 arguments, \n1: Input Directory\n2. Output Directory");
         }
 
         String inputDirectory = args[0];
         String outputDirectory = args[1];
+        String supportDirectory = args[2];
 
         SparkSession spark = SparkSession
                 .builder()
@@ -29,7 +30,7 @@ public class Insight {
                 .option("header", true)
                 .csv(String.format("%s/*", inputDirectory));
 
-        AnalyticsEngine analyticsEngine = new AnalyticsEngine(spark, outputDirectory);
+        AnalyticsEngine analyticsEngine = new AnalyticsEngine(spark, outputDirectory, supportDirectory);
 
         analyticsEngine.findTopAirportsByTaxiTime(csvData);
         analyticsEngine.findTopAirlinesByDelay(csvData);

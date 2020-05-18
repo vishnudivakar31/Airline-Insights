@@ -15,28 +15,28 @@ import java.util.List;
 import static org.apache.spark.sql.functions.*;
 
 public class AnalyticsEngine {
-    private final String CARRIER_FILE_PATH = "src/main/resources/support-data/carriers.csv";
-    private final String AIRPORT_FILE_PATH = "src/main/resources/support-data/airports.csv";
     private final SparkSession spark;
     private Dataset<Row> carrierCodes;
     private Dataset<Row> airportCodes;
     private final String outputDirectory;
+    private final String supportDirectory;
 
-    public AnalyticsEngine(SparkSession spark, String outputDirectory) {
+    public AnalyticsEngine(SparkSession spark, String outputDirectory, String supportDirectory) {
         this.spark = spark;
         this.outputDirectory = outputDirectory;
+        this.supportDirectory = supportDirectory;
         loadAirportCodes();
         loadCarrierCodes();
     }
 
     private void loadAirportCodes() {
-        airportCodes = spark.read().option("header", true).option("inferSchema", true).csv(AIRPORT_FILE_PATH);
+        airportCodes = spark.read().option("header", true).option("inferSchema", true).csv(String.format("%s/airports.csv", supportDirectory));
         airportCodes = airportCodes
                 .select(airportCodes.col("iata").as("airport-code"), airportCodes.col("airport").as("airport-name"));
     }
 
     private void loadCarrierCodes() {
-        carrierCodes = spark.read().option("header", true).option("inferSchema", true).csv(CARRIER_FILE_PATH);
+        carrierCodes = spark.read().option("header", true).option("inferSchema", true).csv(String.format("%s/carriers.csv", supportDirectory));
         carrierCodes = carrierCodes.withColumnRenamed("Code", "carrier-code");
         carrierCodes = carrierCodes.withColumnRenamed("Description", "airline-name");
     }
@@ -60,8 +60,8 @@ public class AnalyticsEngine {
         Dataset<Row> worstAirlines = data.orderBy(data.col("avg-delay").desc()).limit(10);
         Dataset<Row> topAirlines = data.orderBy(data.col("avg-delay").asc()).limit(10);
 
-        worstAirlines.coalesce(1).write().csv(String.format("%s/worstAirlinesByDelay.csv", outputDirectory));
-        topAirlines.coalesce(1).write().csv(String.format("%s/topAirlinesByDelay.csv", outputDirectory));
+        worstAirlines.coalesce(1).write().csv(String.format("%s/worstAirlinesByDelay", outputDirectory));
+        topAirlines.coalesce(1).write().csv(String.format("%s/topAirlinesByDelay", outputDirectory));
     }
 
     public void findTopAirportsByTaxiTime(Dataset<Row> csvData) {
@@ -81,8 +81,8 @@ public class AnalyticsEngine {
                 .orderBy(data.col("average-time").asc())
                 .filter(data.col("average-time").notEqual("0.0"))
                 .limit(10);
-        worstAirports.coalesce(1).write().csv(String.format("%s/worstAirportsByTaxiTime.csv", outputDirectory));
-        bestAirports.coalesce(1).write().csv(String.format("%s/topAirportsByTaxiTime.csv", outputDirectory));
+        worstAirports.coalesce(1).write().csv(String.format("%s/worstAirportsByTaxiTime", outputDirectory));
+        bestAirports.coalesce(1).write().csv(String.format("%s/topAirportsByTaxiTime", outputDirectory));
     }
 
     public void findTopCancellationReasons(Dataset<Row> csvData) {
@@ -110,7 +110,7 @@ public class AnalyticsEngine {
                 .withColumnRenamed("sum(num)", "total-counts")
                 .orderBy(col("total-counts").desc());
         data = data.join(cancellationCodeDS, "cancellation-code");
-        data.coalesce(1).write().csv(String.format("%s/topCancellationReasons.csv", outputDirectory));
+        data.coalesce(1).write().csv(String.format("%s/topCancellationReasons", outputDirectory));
     }
 
     public void findTopDelays(Dataset<Row> csvData) {
@@ -146,7 +146,7 @@ public class AnalyticsEngine {
                 .union(lateAircraftDelay)
                 .orderBy(col("delay").desc());
 
-        data.coalesce(1).write().csv(String.format("%s/topDelays.csv", outputDirectory));
+        data.coalesce(1).write().csv(String.format("%s/topDelays", outputDirectory));
     }
 
     public void findTopAirlinesByFleet(Dataset<Row> csvData) {
@@ -159,6 +159,6 @@ public class AnalyticsEngine {
                 .join(carrierCodes, "carrier-code")
                 .orderBy(col("count").desc())
                 .limit(10);
-        data.coalesce(1).write().csv(String.format("%s/topAirlinesByFleet.csv", outputDirectory));
+        data.coalesce(1).write().csv(String.format("%s/topAirlinesByFleet", outputDirectory));
     }
 }
