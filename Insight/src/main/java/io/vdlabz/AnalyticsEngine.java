@@ -1,12 +1,13 @@
 package io.vdlabz;
 
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.spark_project.dmg.pmml.DataType;
-import scala.Tuple2;
 
 import java.util.Arrays;
 import java.util.List;
@@ -98,7 +99,6 @@ public class AnalyticsEngine {
                 RowFactory.create("C", "National Space and Security Related"),
                 RowFactory.create("D", "Security Related")
         );
-        Encoder<Tuple2<String, String>> encoder = Encoders.tuple(Encoders.STRING(), Encoders.STRING());
         Dataset<Row> cancellationCodeDS = spark.createDataFrame(cancellationCodeMapper, structType);
 
         Dataset<Row> data = csvData
@@ -110,6 +110,42 @@ public class AnalyticsEngine {
                 .withColumnRenamed("sum(num)", "total-counts")
                 .orderBy(col("total-counts").desc());
         data = data.join(cancellationCodeDS, "cancellation-code");
+        data.show();
+    }
+
+    public void findTopDelays(Dataset<Row> csvData) {
+        Dataset<Row> carrierDelay = csvData.select(col("CarrierDelay").as("delay"));
+        carrierDelay = carrierDelay.withColumn("delay-type", lit("carrier-delay"))
+                .groupBy(col("delay-type")).avg()
+                .withColumnRenamed("avg(delay)", "delay");
+
+        Dataset<Row> weatherDelay = csvData.select(col("WeatherDelay").as("delay"));
+        weatherDelay = weatherDelay.withColumn("delay-type", lit("weather-delay"))
+                .groupBy(col("delay-type")).avg()
+                .withColumnRenamed("avg(delay)", "delay");
+
+        Dataset<Row> nasDelay = csvData.select(col("NASDelay").as("delay"));
+        nasDelay = nasDelay.withColumn("delay-type", lit("nas-delay"))
+                .groupBy(col("delay-type")).avg()
+                .withColumnRenamed("avg(delay)", "delay");
+
+        Dataset<Row> securityDelay = csvData.select(col("SecurityDelay").as("delay"));
+        securityDelay = securityDelay.withColumn("delay-type", lit("security-delay"))
+                .groupBy(col("delay-type")).avg()
+                .withColumnRenamed("avg(delay)", "delay");
+
+        Dataset<Row> lateAircraftDelay = csvData.select(col("LateAircraftDelay").as("delay"));
+        lateAircraftDelay = lateAircraftDelay.withColumn("delay-type", lit("late-aircraft-delay"))
+                .groupBy(col("delay-type")).avg()
+                .withColumnRenamed("avg(delay)", "delay");
+
+        Dataset<Row> data = carrierDelay
+                .union(weatherDelay)
+                .union(nasDelay)
+                .union(securityDelay)
+                .union(lateAircraftDelay)
+                .orderBy(col("delay").desc());
+
         data.show();
     }
 }
