@@ -73,16 +73,18 @@ public class AnalyticsEngine {
                 .select(csvData.col("Dest").as("airport-code"), csvData.col("TaxiIn").as("taxi-time"));
         Dataset<Row> data = taxiOutData.union(taxiInData);
         data = data.groupBy(data.col("airport-code")).avg();
-        data = data.withColumnRenamed("avg(taxi-time)", "average-time");
-        data = data.join(airportCodes, "airport-code");
-        data = data.orderBy(data.col("average-time").desc());
-        Dataset<Row> worstAirports = data.limit(10);
-        Dataset<Row> bestAirports = data
-                .orderBy(data.col("average-time").asc())
-                .filter(data.col("average-time").notEqual("0.0"))
-                .limit(10);
-        worstAirports.coalesce(1).write().csv(String.format("%s/worstAirportsByTaxiTime", outputDirectory));
-        bestAirports.coalesce(1).write().csv(String.format("%s/topAirportsByTaxiTime", outputDirectory));
+        if(Arrays.asList(data.columns()).contains("avg(taxi-time)")) {
+            data = data.withColumnRenamed("avg(taxi-time)", "average-time");
+            data = data.join(airportCodes, "airport-code");
+            data = data.orderBy(data.col("average-time").desc());
+            Dataset<Row> worstAirports = data.limit(10);
+            Dataset<Row> bestAirports = data
+                    .orderBy(data.col("average-time").asc())
+                    .filter(data.col("average-time").notEqual("0.0"))
+                    .limit(10);
+            worstAirports.coalesce(1).write().csv(String.format("%s/worstAirportsByTaxiTime", outputDirectory));
+            bestAirports.coalesce(1).write().csv(String.format("%s/topAirportsByTaxiTime", outputDirectory));
+        }
     }
 
     public void findTopCancellationReasons(Dataset<Row> csvData) {
@@ -139,14 +141,16 @@ public class AnalyticsEngine {
                 .groupBy(col("delay-type")).avg()
                 .withColumnRenamed("avg(delay)", "delay");
 
-        Dataset<Row> data = carrierDelay
-                .union(weatherDelay)
-                .union(nasDelay)
-                .union(securityDelay)
-                .union(lateAircraftDelay)
-                .orderBy(col("delay").desc());
+        if(Arrays.asList(lateAircraftDelay.columns()).contains("delay")) {
+            Dataset<Row> data = carrierDelay
+                    .union(weatherDelay)
+                    .union(nasDelay)
+                    .union(securityDelay)
+                    .union(lateAircraftDelay)
+                    .orderBy(col("delay").desc());
 
-        data.coalesce(1).write().csv(String.format("%s/topDelays", outputDirectory));
+            data.coalesce(1).write().csv(String.format("%s/topDelays", outputDirectory));
+        }
     }
 
     public void findTopAirlinesByFleet(Dataset<Row> csvData) {
